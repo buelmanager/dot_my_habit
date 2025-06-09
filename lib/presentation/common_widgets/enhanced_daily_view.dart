@@ -4,13 +4,19 @@ import '../../../core/logger.dart';
 import '../../../data/models/habit.dart';
 import 'enhanced_habit_item.dart';
 
-/// 향상된 일간 보기 위젯
+/// 향상된 일간 보기 위젯 (삭제 기능 포함)
 class EnhancedDailyView extends StatefulWidget {
   /// 습관 목록
   final List<Habit> habits;
 
   /// 습관 토글 콜백
   final Function(Habit) onToggle;
+
+  /// 습관 삭제 콜백
+  final Function(Habit)? onDelete;
+
+  /// 습관 편집 콜백
+  final Function(Habit)? onEdit;
 
   /// 선택된 날짜
   final DateTime selectedDate;
@@ -20,6 +26,8 @@ class EnhancedDailyView extends StatefulWidget {
     Key? key,
     required this.habits,
     required this.onToggle,
+    this.onDelete,
+    this.onEdit,
     required this.selectedDate,
   }) : super(key: key);
 
@@ -86,6 +94,7 @@ class _EnhancedDailyViewState extends State<EnhancedDailyView>
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 100),
       itemCount: widget.habits.length + 1, // +1 for summary at bottom
       itemBuilder: (context, index) {
@@ -98,6 +107,8 @@ class _EnhancedDailyViewState extends State<EnhancedDailyView>
         return EnhancedHabitItem(
           habit: habit,
           onToggle: widget.onToggle,
+          onDelete: widget.onDelete,
+          onEdit: widget.onEdit,
           animationDelay: index * 0.15,
         );
       },

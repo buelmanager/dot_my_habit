@@ -14,7 +14,15 @@ class WeeklyPatternChart extends ConsumerWidget {
     final weeklyProgress = viewModel.state.weeklyProgress;
 
     // 요일별 더미 데이터
-    final List<double> weekdayValues = []; // 월, 화, 수, 목, 금, 토, 일
+    final List<double> weekdayValues = [
+      0.6,
+      0.8,
+      0.9,
+      0.7,
+      0.5,
+      0.3,
+      0.4,
+    ]; // 월, 화, 수, 목, 금, 토, 일
 
     // 실제 데이터 매핑 (weeklyProgress가 있을 경우)
     if (weeklyProgress.isNotEmpty) {

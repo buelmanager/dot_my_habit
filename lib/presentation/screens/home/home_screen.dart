@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/logger.dart';
 import '../../../app_providers.dart';
+import '../../../data/models/habit.dart';
 import '../../common_widgets/enhanced_daily_view.dart';
 import '../../viewmodels/home_viewmodel.dart';
 import 'widgets/home_header.dart';
@@ -38,8 +39,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     logger.debug('HomeScreen 빌드');
 
     // HomeViewModel 관찰
-    final viewModel = ref.watch(
-        homeViewModelProvider);
+    final viewModel = ref.watch(homeViewModelProvider);
     final state = viewModel.state;
 
     return Scaffold(
@@ -163,8 +163,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           },
           child: EnhancedDailyView(
             habits: state.habits,
-            onToggle: viewModel.toggleHabit,
             selectedDate: state.selectedDate,
+            onToggle: (habit) {
+              logger.debug('습관 토글 요청: ${habit.name}');
+              viewModel.toggleHabit(habit);
+            },
+            // 삭제 콜백 추가
+            onDelete: (habit) {
+              logger.debug('습관 삭제 요청: ${habit.name}');
+              viewModel.deleteHabit(habit.id);
+            },
+            // 편집 콜백 추가 (선택사항)
+            onEdit: (habit) {
+              logger.debug('습관 편집 요청: ${habit.name}');
+              showEditHabitDialog(context, habit, viewModel);
+            },
           ),
         );
       case 1: // 주간 뷰
@@ -309,5 +322,219 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         );
       },
     );
+  }
+
+  /// 습관 편집 다이얼로그 표시
+  void showEditHabitDialog(
+    BuildContext context,
+    Habit habit,
+    HomeViewModel viewModel,
+  ) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => EditHabitDialog(
+            habit: habit,
+            onSave: (newName) {
+              viewModel.updateHabitName(habit.id, newName);
+            },
+          ),
+    );
+  }
+}
+
+/// 습관 편집 다이얼로그 위젯
+class EditHabitDialog extends StatefulWidget {
+  /// 편집할 습관
+  final Habit habit;
+
+  /// 저장 콜백
+  final Function(String) onSave;
+
+  const EditHabitDialog({Key? key, required this.habit, required this.onSave})
+    : super(key: key);
+
+  @override
+  State<EditHabitDialog> createState() => _EditHabitDialogState();
+}
+
+class _EditHabitDialogState extends State<EditHabitDialog> {
+  late TextEditingController _nameController;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.habit.name);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text(
+        '습관 편집',
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+      ),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '습관 이름',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.black.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _nameController,
+              autofocus: true,
+              maxLength: 50,
+              decoration: InputDecoration(
+                hintText: '습관 이름을 입력하세요',
+                filled: true,
+                fillColor: Colors.black.withOpacity(0.03),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Colors.black, width: 1),
+                ),
+                counterText: '',
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return '습관 이름을 입력해주세요';
+                }
+                if (value.trim().length < 2) {
+                  return '습관 이름은 2글자 이상 입력해주세요';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // 현재 습관 정보 표시
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.03),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color:
+                          widget.habit.isCompleted ? Colors.black : Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '현재 상태',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.black.withOpacity(0.5),
+                          ),
+                        ),
+                        Text(
+                          widget.habit.isCompleted ? '완료됨' : '미완료',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (widget.habit.streak > 0) ...[
+                    Icon(
+                      Icons.local_fire_department,
+                      color: Colors.orange.shade300,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${widget.habit.streak}일째',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.black.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            '취소',
+            style: TextStyle(color: Colors.black.withOpacity(0.6)),
+          ),
+        ),
+        ElevatedButton(
+          onPressed: _saveHabit,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          child: const Text('저장'),
+        ),
+      ],
+    );
+  }
+
+  void _saveHabit() {
+    if (_formKey.currentState!.validate()) {
+      final newName = _nameController.text.trim();
+
+      // 이름이 변경되지 않았으면 그냥 닫기
+      if (newName == widget.habit.name) {
+        Navigator.pop(context);
+        return;
+      }
+
+      // 저장 콜백 호출
+      widget.onSave(newName);
+      Navigator.pop(context);
+
+      // 성공 메시지 표시
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('습관 이름이 "$newName"로 변경되었습니다'),
+          backgroundColor: Colors.black,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        ),
+      );
+    }
   }
 }
