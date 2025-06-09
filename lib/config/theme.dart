@@ -28,6 +28,33 @@ final appTheme = ThemeData(
   // 스캐폴드 배경색
   scaffoldBackgroundColor: Colors.white,
 
+  // 다이얼로그 테마 (AlertDialog 배경색상 설정)
+  dialogTheme: const DialogTheme(
+    backgroundColor: Colors.white, // 다이얼로그 배경색
+    elevation: 8, // 그림자 높이
+    shape: RoundedRectangleBorder(
+      // 모서리 둥글게
+      borderRadius: BorderRadius.all(Radius.circular(16)),
+    ),
+    titleTextStyle: TextStyle(
+      // 제목 스타일
+      color: Colors.black,
+      fontSize: 20,
+      fontWeight: FontWeight.w600,
+    ),
+    contentTextStyle: TextStyle(
+      // 내용 스타일
+      color: Colors.black87,
+      fontSize: 16,
+      height: 1.4,
+    ),
+    actionsPadding: EdgeInsets.symmetric(
+      // 버튼 패딩
+      horizontal: 16,
+      vertical: 8,
+    ),
+  ),
+
   // 텍스트 테마
   textTheme: const TextTheme(
     displayLarge: TextStyle(
@@ -68,16 +95,9 @@ final appTheme = ThemeData(
       backgroundColor: Colors.black,
       foregroundColor: Colors.white,
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      textStyle: const TextStyle(
-        fontWeight: FontWeight.w500,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w500),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     ),
   ),
 
@@ -85,16 +105,9 @@ final appTheme = ThemeData(
   textButtonTheme: TextButtonThemeData(
     style: TextButton.styleFrom(
       foregroundColor: Colors.black,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      textStyle: const TextStyle(
-        fontWeight: FontWeight.w500,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 12,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      textStyle: const TextStyle(fontWeight: FontWeight.w500),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     ),
   ),
 
@@ -105,10 +118,7 @@ final appTheme = ThemeData(
     margin: EdgeInsets.zero,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
-      side: BorderSide(
-        color: Colors.black.withOpacity(0.05),
-        width: 1,
-      ),
+      side: BorderSide(color: Colors.black.withOpacity(0.05), width: 1),
     ),
   ),
 
@@ -123,10 +133,7 @@ final appTheme = ThemeData(
   inputDecorationTheme: InputDecorationTheme(
     filled: true,
     fillColor: Colors.black.withOpacity(0.03),
-    contentPadding: const EdgeInsets.symmetric(
-      horizontal: 16,
-      vertical: 12,
-    ),
+    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
       borderSide: BorderSide.none,
@@ -137,22 +144,13 @@ final appTheme = ThemeData(
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(
-        color: Colors.black,
-        width: 1,
-      ),
+      borderSide: const BorderSide(color: Colors.black, width: 1),
     ),
     errorBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(
-        color: Colors.red,
-        width: 1,
-      ),
+      borderSide: const BorderSide(color: Colors.red, width: 1),
     ),
-    hintStyle: TextStyle(
-      color: Colors.black.withOpacity(0.4),
-      fontSize: 14,
-    ),
+    hintStyle: TextStyle(color: Colors.black.withOpacity(0.4), fontSize: 14),
   ),
 
   // 슬라이더 테마
@@ -162,9 +160,7 @@ final appTheme = ThemeData(
     thumbColor: Colors.black,
     overlayColor: Colors.black.withOpacity(0.1),
     valueIndicatorColor: Colors.black,
-    valueIndicatorTextStyle: const TextStyle(
-      color: Colors.white,
-    ),
+    valueIndicatorTextStyle: const TextStyle(color: Colors.white),
   ),
 
   // 스위치 테마
@@ -191,16 +187,11 @@ final appTheme = ThemeData(
       }
       return null;
     }),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(4),
-    ),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
   ),
 
   // 아이콘 테마
-  iconTheme: IconThemeData(
-    color: Colors.black.withOpacity(0.7),
-    size: 24,
-  ),
+  iconTheme: IconThemeData(color: Colors.black.withOpacity(0.7), size: 24),
 
   // Fab 테마
   floatingActionButtonTheme: const FloatingActionButtonThemeData(
@@ -215,5 +206,22 @@ final appTheme = ThemeData(
     color: Colors.black,
     circularTrackColor: Colors.black12,
     linearTrackColor: Colors.black12,
+  ),
+
+  // BottomSheet 테마 (추가 옵션)
+  bottomSheetTheme: const BottomSheetThemeData(
+    backgroundColor: Colors.white,
+    elevation: 8,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+  ),
+
+  // SnackBar 테마 (추가 옵션)
+  snackBarTheme: SnackBarThemeData(
+    backgroundColor: Colors.black,
+    contentTextStyle: const TextStyle(color: Colors.white, fontSize: 14),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+    behavior: SnackBarBehavior.floating,
   ),
 );

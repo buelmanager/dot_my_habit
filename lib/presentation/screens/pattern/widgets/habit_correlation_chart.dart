@@ -1,4 +1,6 @@
 // lib/presentation/screens/pattern/widgets/habit_correlation_chart.dart
+// 수정된 습관 연관성 차트
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,9 +16,13 @@ class HabitCorrelationChart extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    logger.info('🔗 HabitCorrelationChart 위젯 빌드 시작');
+
     final viewModel = ref.watch(homeViewModelProvider);
     final habits = viewModel.state.habits;
     final repository = ref.read(habitRepositoryProvider);
+
+    logger.info('📊 연관성 분석 - 현재 습관 수: ${habits.length}');
 
     // 차트의 높이 계산
     final chartHeight = math.max(200.0, habits.length * 40.0);
@@ -38,12 +44,19 @@ class HabitCorrelationChart extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 타이틀
-          const Text(
-            '습관 연관성 분석',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.account_tree_outlined,
+                size: 20,
+                color: Colors.blue.shade700,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                '습관 연관성 분석',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ],
           ),
 
           const SizedBox(height: 5),
@@ -62,119 +75,154 @@ class HabitCorrelationChart extends ConsumerWidget {
           // 차트
           if (habits.isEmpty)
             _buildEmptyState()
+          else if (habits.length < 2)
+            _buildInsufficientDataState()
           else
             FutureBuilder<Map<String, Map<String, double>>>(
-                future: _calculateCorrelations(habits, repository),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return SizedBox(
-                      height: chartHeight,
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.black,
-                        ),
-                      ),
-                    );
-                  }
+              future: _calculateCorrelations(habits, repository),
+              builder: (context, snapshot) {
+                logger.debug('🔄 연관성 계산 상태: ${snapshot.connectionState}');
 
-                  final correlations = snapshot.data!;
+                if (snapshot.hasError) {
+                  logger.error('❌ 연관성 계산 오류: ${snapshot.error}');
+                  return _buildErrorState(snapshot.error.toString());
+                }
 
+                if (!snapshot.hasData) {
+                  logger.debug('⏳ 연관성 데이터 로딩 중...');
                   return SizedBox(
                     height: chartHeight,
-                    child: ListView.builder(
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: habits.length,
-                      itemBuilder: (context, index) {
-                        final habit = habits[index];
-                        final habitCorrelations = correlations[habit.id] ?? {};
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.blue,
+                      ),
+                    ),
+                  );
+                }
 
-                        // 상관관계 값 목록 생성
-                        final values = habits.map((h) =>
-                        h.id == habit.id
-                            ? 1.0  // 자기 자신과는 1.0
-                            : (habitCorrelations[h.id] ?? 0.0)
-                        ).toList();
+                final correlations = snapshot.data!;
+                logger.info('✅ 연관성 계산 완료: ${correlations.length}개 습관');
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: Row(
-                            children: [
-                              // 습관 이름
-                              SizedBox(
-                                width: 80,
-                                child: Text(
-                                  habit.name,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.black.withOpacity(0.7),
-                                  ),
+                return SizedBox(
+                  height: chartHeight,
+                  child: ListView.builder(
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: habits.length,
+                    itemBuilder: (context, index) {
+                      final habit = habits[index];
+                      final habitCorrelations = correlations[habit.id] ?? {};
+
+                      // 상관관계 값 목록 생성
+                      final values =
+                          habits
+                              .map(
+                                (h) =>
+                                    h.id == habit.id
+                                        ? 1.0 // 자기 자신과는 1.0
+                                        : (habitCorrelations[h.id] ?? 0.0),
+                              )
+                              .toList();
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            // 습관 이름
+                            SizedBox(
+                              width: 80,
+                              child: Text(
+                                habit.name,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black.withOpacity(0.7),
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
+                            ),
 
-                              const SizedBox(width: 10),
+                            const SizedBox(width: 10),
 
-                              // 상관관계 막대 그래프
-                              Expanded(
-                                child: Row(
-                                  children: List.generate(
-                                    values.length,
-                                        (i) => Expanded(
-                                      child: Container(
-                                        height: 20,
-                                        margin: const EdgeInsets.symmetric(horizontal: 2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(values[i]),
-                                          borderRadius: BorderRadius.circular(3),
-                                        ),
+                            // 상관관계 막대 그래프
+                            Expanded(
+                              child: Row(
+                                children: List.generate(
+                                  values.length,
+                                  (i) => Expanded(
+                                    child: Container(
+                                      height: 20,
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            i == index
+                                                ? Colors
+                                                    .blue
+                                                    .shade600 // 자기 자신
+                                                : Colors.blue.withOpacity(
+                                                  values[i],
+                                                ),
+                                        borderRadius: BorderRadius.circular(3),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                }
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                );
+              },
             ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 15),
 
           // 설명
-          if (habits.isNotEmpty)
+          if (habits.length >= 2)
             FutureBuilder<Map<String, Map<String, double>>>(
-                future: _calculateCorrelations(habits, repository),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return const SizedBox.shrink();
-                  }
+              future: _calculateCorrelations(habits, repository),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const SizedBox.shrink();
+                }
 
-                  final correlations = snapshot.data!;
-
-                  return Text(
+                final correlations = snapshot.data!;
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
                     _getCorrelationDescription(habits, correlations),
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black.withOpacity(0.6),
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.w500,
                     ),
-                  );
-                }
+                  ),
+                );
+              },
             ),
         ],
       ),
     );
   }
 
-  // 습관 간 상관관계 계산
+  // 습관 간 상관관계 계산 (개선된 버전)
   Future<Map<String, Map<String, double>>> _calculateCorrelations(
-      List<Habit> habits,
-      dynamic repository
-      ) async {
+    List<Habit> habits,
+    dynamic repository,
+  ) async {
+    logger.info('🔄 습관 상관관계 계산 시작: ${habits.length}개 습관');
+
     if (habits.length < 2) {
+      logger.warning('⚠️ 습관이 2개 미만이므로 상관관계 계산 불가');
       return {};
     }
 
@@ -183,92 +231,113 @@ class HabitCorrelationChart extends ConsumerWidget {
       result[habit.id] = {};
     }
 
-    // 지난 30일간의 데이터로 상관관계 계산
-    final today = DateTime.now();
-    final dateFormat = DateFormat('yyyy-MM-dd');
+    try {
+      // 지난 30일간의 데이터로 상관관계 계산
+      final today = DateTime.now();
+      final dateFormat = DateFormat('yyyy-MM-dd');
 
-    // 각 습관별 날짜별 완료 상태 맵 생성
-    final habitCompletionMaps = <String, Map<String, bool>>{};
-    for (final habit in habits) {
-      habitCompletionMaps[habit.id] = {};
-    }
-
-    // 30일간의 데이터 수집
-    for (int day = 0; day < 30; day++) {
-      final date = today.subtract(Duration(days: day));
-      final dateString = dateFormat.format(date);
-
-      // 해당 날짜의 모든 습관 조회
-      final habitsOnDate = await repository.getHabitsForDate(date);
-      if (habitsOnDate.isEmpty) continue;
-
-      // 각 습관의 완료 상태 저장
+      // 각 습관별 날짜별 완료 상태 맵 생성
+      final habitCompletionMaps = <String, Map<String, bool>>{};
       for (final habit in habits) {
-        // 해당 날짜에 이 습관이 있는지 찾기
-        final habitOnDate = habitsOnDate.firstWhere(
-              (h) => h.id == habit.id,
-          orElse: () => null,
-        );
-
-        // 습관이 있으면 완료 상태 저장
-        if (habitOnDate != null) {
-          habitCompletionMaps[habit.id]![dateString] = habitOnDate.isCompleted;
-        }
+        habitCompletionMaps[habit.id] = {};
       }
-    }
 
-    // 상관관계 계산 (각 습관 쌍에 대해)
-    for (int i = 0; i < habits.length; i++) {
-      for (int j = 0; j < habits.length; j++) {
-        if (i == j) continue; // 자신과의 상관관계는 건너뛰기
+      logger.debug('📅 최근 30일 데이터 수집 시작');
+      int totalDataDays = 0;
 
-        final habit1 = habits[i];
-        final habit2 = habits[j];
+      // 30일간의 데이터 수집
+      for (int day = 0; day < 30; day++) {
+        final date = today.subtract(Duration(days: day));
+        final dateString = dateFormat.format(date);
 
-        final completions1 = habitCompletionMaps[habit1.id] ?? {};
-        final completions2 = habitCompletionMaps[habit2.id] ?? {};
+        try {
+          // 해당 날짜의 모든 습관 조회
+          final habitsOnDate = await repository.getHabitsForDate(date);
 
-        // 두 습관 모두 데이터가 있는 날짜만 찾기
-        final commonDates = completions1.keys.toSet().intersection(completions2.keys.toSet()).toList();
+          if (habitsOnDate != null && habitsOnDate.isNotEmpty) {
+            totalDataDays++;
 
-        if (commonDates.isEmpty) continue;
+            // 각 습관의 완료 상태 저장
+            for (final habit in habits) {
+              // 해당 날짜에 이 습관이 있는지 찾기 (Null Safety 개선)
+              Habit? habitOnDate;
+              try {
+                habitOnDate = habitsOnDate.firstWhere((h) => h.id == habit.id);
+              } catch (e) {
+                // 해당 습관이 그 날에 없으면 null
+                habitOnDate = null;
+              }
 
-        // 상관관계 계산
-        int bothCompleted = 0;
-        int habit1OnlyCompleted = 0;
-        int habit2OnlyCompleted = 0;
-        int neitherCompleted = 0;
-
-        for (final date in commonDates) {
-          final isCompleted1 = completions1[date] ?? false;
-          final isCompleted2 = completions2[date] ?? false;
-
-          if (isCompleted1 && isCompleted2) {
-            bothCompleted++;
-          } else if (isCompleted1 && !isCompleted2) {
-            habit1OnlyCompleted++;
-          } else if (!isCompleted1 && isCompleted2) {
-            habit2OnlyCompleted++;
-          } else {
-            neitherCompleted++;
+              // 습관이 있으면 완료 상태 저장
+              if (habitOnDate != null) {
+                habitCompletionMaps[habit.id]![dateString] =
+                    habitOnDate.isCompleted;
+              }
+            }
           }
+        } catch (e) {
+          logger.warning('⚠️ 날짜 ${dateString} 데이터 수집 실패: $e');
         }
-
-        // 간단한 상관계수 계산 (일치하는 비율)
-        final agreement = (bothCompleted + neitherCompleted) / commonDates.length;
-
-        // habit1이 완료되었을 때 habit2가 완료된 비율
-        double correlation = 0.0;
-        if (bothCompleted + habit1OnlyCompleted > 0) {
-          correlation = bothCompleted / (bothCompleted + habit1OnlyCompleted);
-        }
-
-        // 상관관계 저장
-        result[habit1.id]![habit2.id] = correlation;
       }
-    }
 
-    return result;
+      logger.info('📊 데이터 수집 완료: $totalDataDays일치 데이터');
+
+      // 상관관계 계산 (각 습관 쌍에 대해)
+      for (int i = 0; i < habits.length; i++) {
+        for (int j = 0; j < habits.length; j++) {
+          if (i == j) continue; // 자신과의 상관관계는 건너뛰기
+
+          final habit1 = habits[i];
+          final habit2 = habits[j];
+
+          final completions1 = habitCompletionMaps[habit1.id] ?? {};
+          final completions2 = habitCompletionMaps[habit2.id] ?? {};
+
+          // 두 습관 모두 데이터가 있는 날짜만 찾기
+          final commonDates =
+              completions1.keys
+                  .toSet()
+                  .intersection(completions2.keys.toSet())
+                  .toList();
+
+          if (commonDates.isEmpty) continue;
+
+          // 상관관계 계산
+          int bothCompleted = 0;
+          int habit1OnlyCompleted = 0;
+
+          for (final date in commonDates) {
+            final isCompleted1 = completions1[date] ?? false;
+            final isCompleted2 = completions2[date] ?? false;
+
+            if (isCompleted1 && isCompleted2) {
+              bothCompleted++;
+            } else if (isCompleted1 && !isCompleted2) {
+              habit1OnlyCompleted++;
+            }
+          }
+
+          // habit1이 완료되었을 때 habit2가 완료된 비율
+          double correlation = 0.0;
+          if (bothCompleted + habit1OnlyCompleted > 0) {
+            correlation = bothCompleted / (bothCompleted + habit1OnlyCompleted);
+          }
+
+          // 상관관계 저장
+          result[habit1.id]![habit2.id] = correlation;
+
+          logger.debug(
+            '🔗 ${habit1.name} -> ${habit2.name}: ${(correlation * 100).toInt()}%',
+          );
+        }
+      }
+
+      logger.info('✅ 상관관계 계산 완료');
+      return result;
+    } catch (e, stackTrace) {
+      logger.error('❌ 상관관계 계산 실패: $e', error: e, stackTrace: stackTrace);
+      return {};
+    }
   }
 
   // 빈 상태 위젯
@@ -276,21 +345,81 @@ class HabitCorrelationChart extends ConsumerWidget {
     return Container(
       height: 100,
       alignment: Alignment.center,
-      child: Text(
-        '습관 데이터가 부족합니다',
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.black.withOpacity(0.5),
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.account_tree_outlined,
+            size: 32,
+            color: Colors.grey.shade400,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '습관을 추가해주세요',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 데이터 부족 상태 위젯
+  Widget _buildInsufficientDataState() {
+    return Container(
+      height: 100,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.data_usage_outlined,
+            size: 32,
+            color: Colors.orange.shade400,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '연관성 분석을 위해서는\n최소 2개 이상의 습관이 필요합니다',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black.withOpacity(0.6),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 에러 상태 위젯
+  Widget _buildErrorState(String error) {
+    return Container(
+      height: 100,
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 32, color: Colors.red.shade400),
+          const SizedBox(height: 8),
+          Text(
+            '데이터 로드 중 오류가 발생했습니다',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black.withOpacity(0.6),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // 상관관계 설명 생성
   String _getCorrelationDescription(
-      List<Habit> habits,
-      Map<String, Map<String, double>> correlations
-      ) {
+    List<Habit> habits,
+    Map<String, Map<String, double>> correlations,
+  ) {
     if (habits.length < 2 || correlations.isEmpty) {
       return '데이터가 충분하지 않습니다.';
     }
@@ -317,12 +446,14 @@ class HabitCorrelationChart extends ConsumerWidget {
       }
     }
 
-    if (highestCorrelation > 0.6) {
-      return '"$habit1Name"와(과) "$habit2Name"는 강한 연관성을 보입니다. (${(highestCorrelation * 100).toInt()}%)';
+    if (highestCorrelation > 0.7) {
+      return '🔥 "$habit1Name"를 완료하면 "$habit2Name"도 ${(highestCorrelation * 100).toInt()}% 확률로 완료됩니다!';
+    } else if (highestCorrelation > 0.5) {
+      return '✨ "$habit1Name"와 "$habit2Name"는 어느 정도 연관성을 보입니다. (${(highestCorrelation * 100).toInt()}%)';
     } else if (highestCorrelation > 0.3) {
-      return '"$habit1Name"와(과) "$habit2Name"는 어느 정도 연관성을 보입니다. (${(highestCorrelation * 100).toInt()}%)';
+      return '💡 "$habit1Name"와 "$habit2Name"는 약간의 연관성을 보입니다. (${(highestCorrelation * 100).toInt()}%)';
     } else {
-      return '습관들 간의 뚜렷한 연관성이 보이지 않습니다.';
+      return '📊 습관들 간의 뚜렷한 연관성이 아직 나타나지 않았습니다. 더 많은 데이터가 쌓이면 패턴을 발견할 수 있어요!';
     }
   }
 }

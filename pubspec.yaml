@@ -56,11 +56,14 @@ dependencies:
   file_picker: ^10.1.2
   permission_handler: ^12.0.0+1
   share_plus: ^10.1.4
+  flutter_dotenv: ^5.0.2
+  google_generative_ai: ^0.2.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
 
+  flutter_launcher_icons: ^0.13.1
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
   # activated in the `analysis_options.yaml` file located at the root of your
@@ -71,6 +74,20 @@ dev_dependencies:
   freezed: ^2.4.7     # (최신 버전으로 업데이트하는 것을 권장합니다)
   freezed_annotation: ^2.4.1 # (최신 버전으로 업데이트하는 것을 권장합니다)
 
+# 앱 아이콘 설정
+flutter_launcher_icons:
+    android: "launcher_icon"
+    ios: true
+    image_path: "assets/images/app_icon.png"
+    min_sdk_android: 21
+    adaptive_icon_background: "#FFFFFF"
+    adaptive_icon_foreground: "assets/images/app_icon.png"
+    remove_alpha_ios: true
+    web:
+      generate: true
+      image_path: "assets/images/app_icon.png"
+      background_color: "#FFFFFF"
+      theme_color: "#000000"
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -83,8 +100,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+     - assets/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

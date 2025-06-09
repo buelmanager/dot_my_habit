@@ -6,11 +6,13 @@ import 'dart:developer' as developer;
 import '../../../../../core/logger.dart';
 import '../../../../../data/models/habit.dart';
 import '../../../../app_providers.dart';
-import '../widgets/habit_insights_summary.dart';
-import '../widgets/habit_recommendations_card.dart';
+import '../widgets/ai_insights_summary.dart';
+import '../widgets/ai_habit_recommendations.dart';
+import '../widgets/ai_pattern_prediction.dart';
 import '../widgets/habit_achievements_collection.dart';
+import '../widgets/habit_correlation_chart.dart';
 
-/// 패턴 분석 심층 분석 화면
+/// 패턴 분석 심층 분석 화면 (AI 통합)
 class PatternAnalyticsView extends ConsumerWidget {
   const PatternAnalyticsView({Key? key}) : super(key: key);
 
@@ -18,7 +20,6 @@ class PatternAnalyticsView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     logger.debug('PatternAnalyticsView 빌드');
     developer.log('PatternAnalyticsView 빌드', name: 'PatternAnalyticsView');
-    print('PatternAnalyticsView 빌드');
 
     final viewModel = ref.watch(homeViewModelProvider);
     final state = viewModel.state;
@@ -29,7 +30,6 @@ class PatternAnalyticsView extends ConsumerWidget {
       '분석 화면 - 습관 수: ${habits.length}',
       name: 'PatternAnalyticsView',
     );
-    print('분석 화면 - 습관 수: ${habits.length}');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.only(bottom: 20),
@@ -38,8 +38,8 @@ class PatternAnalyticsView extends ConsumerWidget {
         children: [
           if (habits.isEmpty)
             _buildEmptyState(
-              '습관을 추가하면 분석이 시작됩니다',
-              '습관 추가 후 데이터가 쌓이면 상세한 분석 결과를 확인할 수 있습니다.',
+              '습관을 추가하면 AI 분석이 시작됩니다',
+              '습관 추가 후 데이터가 쌓이면 AI가 상세한 분석 결과를 제공합니다.',
             )
           else
             FutureBuilder<Map<String, dynamic>>(
@@ -52,7 +52,6 @@ class PatternAnalyticsView extends ConsumerWidget {
                     '분석 데이터 로드 에러: ${snapshot.error}',
                     name: 'PatternAnalyticsView',
                   );
-                  print('분석 데이터 로드 에러: ${snapshot.error}');
 
                   return _buildEmptyState(
                     '데이터 로드 중 오류가 발생했습니다',
@@ -63,7 +62,6 @@ class PatternAnalyticsView extends ConsumerWidget {
                 // 로딩 중
                 if (!snapshot.hasData) {
                   developer.log('분석 데이터 로딩 중...', name: 'PatternAnalyticsView');
-                  print('분석 데이터 로딩 중...');
 
                   return const SizedBox(
                     height: 400,
@@ -77,7 +75,7 @@ class PatternAnalyticsView extends ConsumerWidget {
                           ),
                           SizedBox(height: 16),
                           Text(
-                            '분석 데이터를 로드하고 있습니다...',
+                            'AI가 분석 데이터를 준비하고 있습니다...',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.black54,
@@ -98,9 +96,6 @@ class PatternAnalyticsView extends ConsumerWidget {
                   '분석 데이터 로드 완료 - 충분한 데이터: $hasEnoughData, 총 데이터 포인트: $totalDataPoints, 데이터가 있는 날: $daysWithData',
                   name: 'PatternAnalyticsView',
                 );
-                print(
-                  '분석 데이터 로드 완료 - 충분한 데이터: $hasEnoughData, 총 데이터 포인트: $totalDataPoints, 데이터가 있는 날: $daysWithData',
-                );
 
                 if (!hasEnoughData) {
                   return _buildInsufficientDataState(
@@ -112,6 +107,7 @@ class PatternAnalyticsView extends ConsumerWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const SizedBox(height: 24),
                     // 분석 상태 헤더
                     _buildAnalyticsHeader(daysWithData, totalDataPoints),
 
@@ -121,19 +117,26 @@ class PatternAnalyticsView extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: HabitAchievementsCollection(),
                     ),
+
                     const SizedBox(height: 24),
-                    // 습관 인사이트 요약
+
+                    // ✨ AI 인사이트 요약 (새로 추가)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: HabitInsightsSummary(),
+                      child: AIInsightsSummary(),
                     ),
 
+                    // AI 패턴 예측 (새로 추가)
+                    // Padding(
+                    //   padding: const EdgeInsets.symmetric(horizontal: 20),
+                    //   child: AIPatternPrediction(),
+                    // ),
                     const SizedBox(height: 24),
 
-                    // AI 습관 추천
+                    // ✨ AI 습관 추천 (새로 추가)
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: HabitRecommendationsCard(),
+                      child: AIHabitRecommendations(),
                     ),
                   ],
                 );
@@ -153,7 +156,6 @@ class PatternAnalyticsView extends ConsumerWidget {
   ) async {
     try {
       developer.log('분석 데이터 로드 시작', name: 'PatternAnalyticsView');
-      print('분석 데이터 로드 시작');
 
       if (habits.isEmpty) {
         return {
@@ -164,7 +166,7 @@ class PatternAnalyticsView extends ConsumerWidget {
         };
       }
 
-      // 최근 14일간 데이터 확인 (30일은 너무 많음)
+      // 최근 14일간 데이터 확인
       int totalDataPoints = 0;
       int daysWithData = 0;
       int daysWithCompletedHabits = 0;
@@ -202,7 +204,6 @@ class PatternAnalyticsView extends ConsumerWidget {
           }
         } catch (e) {
           developer.log('Day $day 데이터 로드 에러: $e', name: 'PatternAnalyticsView');
-          print('Day $day 데이터 로드 에러: $e');
         }
       }
 
@@ -210,14 +211,8 @@ class PatternAnalyticsView extends ConsumerWidget {
         '분석 데이터 수집 완료 - 데이터가 있는 날: $daysWithData, 완료된 습관이 있는 날: $daysWithCompletedHabits, 총 데이터 포인트: $totalDataPoints',
         name: 'PatternAnalyticsView',
       );
-      print(
-        '분석 데이터 수집 완료 - 데이터가 있는 날: $daysWithData, 완료된 습관이 있는 날: $daysWithCompletedHabits, 총 데이터 포인트: $totalDataPoints',
-      );
 
-      // 분석에 충분한 데이터 조건 (더 현실적으로 조정):
-      // 1. 최소 3일 이상의 데이터가 있어야 함
-      // 2. 최소 1일 이상 완료된 습관이 있어야 함
-      // 3. 총 데이터 포인트가 6개 이상이어야 함 (3일 * 2개 습관)
+      // 분석에 충분한 데이터 조건
       final hasEnoughData =
           daysWithData >= 3 &&
           daysWithCompletedHabits >= 1 &&
@@ -226,9 +221,6 @@ class PatternAnalyticsView extends ConsumerWidget {
       developer.log(
         '분석 가능 여부: $hasEnoughData (조건: 데이터 3일+=${daysWithData >= 3}, 완료 1일+=${daysWithCompletedHabits >= 1}, 포인트 6+=${totalDataPoints >= 6})',
         name: 'PatternAnalyticsView',
-      );
-      print(
-        '분석 가능 여부: $hasEnoughData (조건: 데이터 3일+=${daysWithData >= 3}, 완료 1일+=${daysWithCompletedHabits >= 1}, 포인트 6+=${totalDataPoints >= 6})',
       );
 
       return {
@@ -239,9 +231,6 @@ class PatternAnalyticsView extends ConsumerWidget {
       };
     } catch (e, stackTrace) {
       developer.log('분석 데이터 로드 실패: $e', name: 'PatternAnalyticsView');
-      print('분석 데이터 로드 실패: $e');
-      print('Stack trace: $stackTrace');
-
       rethrow;
     }
   }
@@ -252,16 +241,30 @@ class PatternAnalyticsView extends ConsumerWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.02),
+        gradient: LinearGradient(
+          colors: [
+            Colors.black.withOpacity(0.05),
+            Colors.black.withOpacity(0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.black.withOpacity(0.05), width: 1),
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.analytics_outlined,
-            size: 24,
-            color: Colors.black.withOpacity(0.7),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.psychology_outlined,
+              size: 24,
+              color: Colors.black.withOpacity(0.7),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -269,7 +272,7 @@ class PatternAnalyticsView extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '분석 활성화됨',
+                  'AI 분석 활성화됨',
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
@@ -290,7 +293,7 @@ class PatternAnalyticsView extends ConsumerWidget {
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Text(
-              '활성',
+              'LIVE',
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.green,
@@ -330,13 +333,13 @@ class PatternAnalyticsView extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           const Text(
-            '조금 더 데이터가 필요해요',
+            'AI가 분석할 데이터를 수집하고 있어요',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
           Text(
-            '현재 $daysWithData일의 데이터가 수집되었습니다.\n심층 분석을 위해 최소 7일의 완성된 데이터가 필요합니다.',
+            '현재 $daysWithData일의 데이터가 수집되었습니다.\nAI 분석을 위해 최소 3일의 완성된 데이터가 필요합니다.',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
@@ -357,13 +360,13 @@ class PatternAnalyticsView extends ConsumerWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      Icons.lightbulb_outline,
+                      Icons.auto_awesome,
                       size: 16,
                       color: Colors.orange.shade700,
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '분석 활성화 조건',
+                      'AI 분석 활성화 조건',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -410,7 +413,7 @@ class PatternAnalyticsView extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            Icons.analytics_outlined,
+            Icons.psychology_outlined,
             size: 64,
             color: Colors.black.withOpacity(0.2),
           ),

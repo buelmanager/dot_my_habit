@@ -109,19 +109,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
 
             // 개발자용 섹션 (빠른 데이터 관리)
-            _buildSectionHeader(context, '개발자 옵션'),
-            _buildSettingItem(
-              context,
-              icon: Icons.delete_outline,
-              title: '더미 데이터 초기화',
-              subtitle: '테스트용 데이터 다시 로드',
-              onTap: () {
-                logger.debug('더미 데이터 초기화 탭');
-                _resetDummyData(context);
-              },
-              showDivider: false,
-            ),
-
+            // _buildSectionHeader(context, '개발자 옵션'),
+            // _buildSettingItem(
+            //   context,
+            //   icon: Icons.delete_outline,
+            //   title: '더미 데이터 초기화',
+            //   subtitle: '테스트용 데이터 다시 로드',
+            //   onTap: () {
+            //     logger.debug('더미 데이터 초기화 탭');
+            //     _resetDummyData(context);
+            //   },
+            //   showDivider: false,
+            // ),
             const SizedBox(height: 40),
           ],
         ),

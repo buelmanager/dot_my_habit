@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import '../config/theme.dart';
 import '../core/logger.dart';
 import '../data/datasources/local/database.dart';
+import '../data/services/ai_habit_analysis_service.dart';
 import '../app_router.dart';
 
 Future<void> main() async {
@@ -23,9 +25,22 @@ Future<void> main() async {
   logger.info('앱 시작');
 
   try {
+    // 환경 변수 로드 (.env 파일)
+    await dotenv.load(fileName: "assets/.env");
+    logger.info('환경 변수 로드 완료');
+
     // 로컬 데이터베이스 초기화
     await AppDatabase.initialize();
     logger.info('로컬 데이터베이스 초기화 완료');
+
+    // AI 서비스 초기화
+    try {
+      await AIHabitAnalysisService().initialize();
+      logger.info('AI 습관 분석 서비스 초기화 완료');
+    } catch (e) {
+      logger.warning('AI 서비스 초기화 실패 (API 키 확인 필요): $e');
+      // AI 서비스 초기화에 실패해도 앱은 계속 실행
+    }
 
     // 앱 실행
     runApp(const ProviderScope(child: DotHabitApp()));
@@ -48,7 +63,7 @@ class DotHabitApp extends ConsumerWidget {
     final router = ref.watch(appRouterProvider);
 
     return MaterialApp.router(
-      title: '점(Dot)',
+      title: '점(Dot) - AI 습관 분석',
       theme: appTheme,
       debugShowCheckedModeBanner: false,
       routerConfig: router,
@@ -71,6 +86,14 @@ class AppInitErrorScreen extends StatelessWidget {
               const Icon(Icons.error_outline, size: 48, color: Colors.red),
               const SizedBox(height: 16),
               const Text('앱 초기화 중 오류가 발생했습니다', style: TextStyle(fontSize: 16)),
+              const SizedBox(height: 8),
+              Text(
+                'AI 기능을 사용하려면 API 키 설정이 필요합니다',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.black.withOpacity(0.6),
+                ),
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
