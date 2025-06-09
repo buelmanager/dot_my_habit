@@ -14,7 +14,7 @@ class WeeklyPatternChart extends ConsumerWidget {
     final weeklyProgress = viewModel.state.weeklyProgress;
 
     // 요일별 더미 데이터
-    final List<double> weekdayValues = [0.6, 0.8, 0.9, 0.7, 0.5, 0.3, 0.4]; // 월, 화, 수, 목, 금, 토, 일
+    final List<double> weekdayValues = []; // 월, 화, 수, 목, 금, 토, 일
 
     // 실제 데이터 매핑 (weeklyProgress가 있을 경우)
     if (weeklyProgress.isNotEmpty) {
@@ -59,23 +59,24 @@ class WeeklyPatternChart extends ConsumerWidget {
           // 차트
           Expanded(
             child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final availableWidth = constraints.maxWidth;
-                  final barWidth = (availableWidth - 20) / weekdayValues.length - 8;
+              builder: (context, constraints) {
+                final availableWidth = constraints.maxWidth;
+                final barWidth =
+                    (availableWidth - 20) / weekdayValues.length - 8;
 
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(weekdayValues.length, (index) {
-                      return _buildBar(
-                        index: index,
-                        value: weekdayValues[index],
-                        barWidth: barWidth,
-                        maxHeight: constraints.maxHeight - 45,
-                      );
-                    }),
-                  );
-                }
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: List.generate(weekdayValues.length, (index) {
+                    return _buildBar(
+                      index: index,
+                      value: weekdayValues[index],
+                      barWidth: barWidth,
+                      maxHeight: constraints.maxHeight - 45,
+                    );
+                  }),
+                );
+              },
             ),
           ),
 
@@ -84,7 +85,10 @@ class WeeklyPatternChart extends ConsumerWidget {
             padding: const EdgeInsets.only(top: 12),
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.03),
                   borderRadius: BorderRadius.circular(20),
@@ -135,9 +139,10 @@ class WeeklyPatternChart extends ConsumerWidget {
           width: barWidth,
           height: barHeight,
           decoration: BoxDecoration(
-            color: value > 0.7
-                ? Colors.black
-                : Colors.black.withOpacity(0.3 + value * 0.6),
+            color:
+                value > 0.7
+                    ? Colors.black
+                    : Colors.black.withOpacity(0.3 + value * 0.6),
             borderRadius: const BorderRadius.only(
               topLeft: Radius.circular(4),
               topRight: Radius.circular(4),
@@ -215,7 +220,8 @@ class WeeklyPatternChart extends ConsumerWidget {
   // 패턴 분석 메시지 생성
   String _getPatternMessage(List<double> values) {
     // 평일 평균 (월~금)
-    final weekdayAvg = (values[0] + values[1] + values[2] + values[3] + values[4]) / 5;
+    final weekdayAvg =
+        (values[0] + values[1] + values[2] + values[3] + values[4]) / 5;
 
     // 주말 평균 (토~일)
     final weekendAvg = (values[5] + values[6]) / 2;

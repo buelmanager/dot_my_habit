@@ -56,7 +56,7 @@ class HabitRepositoryImpl implements HabitRepository {
       // 로컬 데이터 소스에서 조회
       final habitDtos = await _localDataSource.getHabitsForDate(date);
 
-      // DTO를 모델로 변환
+      // DTO를 모델로 변환ㅈ
       final habits = habitDtos.map((dto) => HabitDto.toModel(dto)).toList();
 
       //logger.debug('날짜별 습관 조회 결과: ${habits.length}개', tag: _tag);

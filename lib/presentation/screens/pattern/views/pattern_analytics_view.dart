@@ -6,10 +6,9 @@ import 'dart:developer' as developer;
 import '../../../../../core/logger.dart';
 import '../../../../../data/models/habit.dart';
 import '../../../../app_providers.dart';
-import '../widgets/habit_correlation_chart.dart';
-import '../widgets/time_of_day_chart.dart';
-import '../widgets/habit_prediction_card.dart';
-import '../widgets/personal_report.dart';
+import '../widgets/habit_insights_summary.dart';
+import '../widgets/habit_recommendations_card.dart';
+import '../widgets/habit_achievements_collection.dart';
 
 /// 패턴 분석 심층 분석 화면
 class PatternAnalyticsView extends ConsumerWidget {
@@ -117,35 +116,24 @@ class PatternAnalyticsView extends ConsumerWidget {
                     _buildAnalyticsHeader(daysWithData, totalDataPoints),
 
                     const SizedBox(height: 24),
-
-                    // 습관 상관관계 분석
+                    // 성취 배지 컬렉션
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: HabitCorrelationChart(),
+                      child: HabitAchievementsCollection(),
+                    ),
+                    const SizedBox(height: 24),
+                    // 습관 인사이트 요약
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: HabitInsightsSummary(),
                     ),
 
                     const SizedBox(height: 24),
 
-                    // 시간대별 완료 패턴
+                    // AI 습관 추천
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: TimeOfDayChart(),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // 습관 달성 예측
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: HabitPredictionCard(),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // 개인 리포트
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: PersonalReport(),
+                      child: HabitRecommendationsCard(),
                     ),
                   ],
                 );
@@ -176,13 +164,13 @@ class PatternAnalyticsView extends ConsumerWidget {
         };
       }
 
-      // 최근 30일간 데이터 확인
+      // 최근 14일간 데이터 확인 (30일은 너무 많음)
       int totalDataPoints = 0;
       int daysWithData = 0;
       int daysWithCompletedHabits = 0;
       final today = DateTime.now();
 
-      for (int day = 0; day < 30; day++) {
+      for (int day = 0; day < 14; day++) {
         final date = today.subtract(Duration(days: day));
 
         try {
@@ -226,21 +214,21 @@ class PatternAnalyticsView extends ConsumerWidget {
         '분석 데이터 수집 완료 - 데이터가 있는 날: $daysWithData, 완료된 습관이 있는 날: $daysWithCompletedHabits, 총 데이터 포인트: $totalDataPoints',
       );
 
-      // 분석에 충분한 데이터 조건:
-      // 1. 최소 7일 이상의 데이터가 있어야 함
-      // 2. 최소 5일 이상 완료된 습관이 있어야 함
-      // 3. 총 데이터 포인트가 20개 이상이어야 함
+      // 분석에 충분한 데이터 조건 (더 현실적으로 조정):
+      // 1. 최소 3일 이상의 데이터가 있어야 함
+      // 2. 최소 1일 이상 완료된 습관이 있어야 함
+      // 3. 총 데이터 포인트가 6개 이상이어야 함 (3일 * 2개 습관)
       final hasEnoughData =
-          daysWithData >= 7 &&
-          daysWithCompletedHabits >= 5 &&
-          totalDataPoints >= 20;
+          daysWithData >= 3 &&
+          daysWithCompletedHabits >= 1 &&
+          totalDataPoints >= 6;
 
       developer.log(
-        '분석 가능 여부: $hasEnoughData (조건: 데이터 7일+=${daysWithData >= 7}, 완료 5일+=${daysWithCompletedHabits >= 5}, 포인트 20+=${totalDataPoints >= 20})',
+        '분석 가능 여부: $hasEnoughData (조건: 데이터 3일+=${daysWithData >= 3}, 완료 1일+=${daysWithCompletedHabits >= 1}, 포인트 6+=${totalDataPoints >= 6})',
         name: 'PatternAnalyticsView',
       );
       print(
-        '분석 가능 여부: $hasEnoughData (조건: 데이터 7일+=${daysWithData >= 7}, 완료 5일+=${daysWithCompletedHabits >= 5}, 포인트 20+=${totalDataPoints >= 20})',
+        '분석 가능 여부: $hasEnoughData (조건: 데이터 3일+=${daysWithData >= 3}, 완료 1일+=${daysWithCompletedHabits >= 1}, 포인트 6+=${totalDataPoints >= 6})',
       );
 
       return {
@@ -386,7 +374,7 @@ class PatternAnalyticsView extends ConsumerWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '• 최소 7일 이상의 습관 기록\n• 최소 5일 이상 완료된 습관\n• 총 20개 이상의 습관 데이터',
+                  '• 최소 3일 이상의 습관 기록\n• 최소 1일 이상 완료된 습관\n• 꾸준한 습관 실행 패턴',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.orange.shade600,
