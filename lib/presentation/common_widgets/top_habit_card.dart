@@ -84,7 +84,7 @@ class TopHabitCard extends StatelessWidget {
                 tween: IntTween(begin: 0, end: habit.streak),
                 duration: const Duration(milliseconds: 1200),
                 builder: (context, value, child) {
-                  logger.debug('TopHabitCard 스트릭 애니메이션 값: $value');
+                  //logger.debug('TopHabitCard 스트릭 애니메이션 값: $value');
                   return Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,

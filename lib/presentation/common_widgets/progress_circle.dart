@@ -36,7 +36,7 @@ class ProgressCircle extends StatelessWidget {
             animation: progressAnimation,
             builder: (context, child) {
               final currentProgress = progressAnimation.value;
-              logger.debug('ProgressCircle 애니메이션 값: $currentProgress');
+              //logger.debug('ProgressCircle 애니메이션 값: $currentProgress');
 
               return SizedBox(
                 width: 80,
@@ -61,9 +61,9 @@ class ProgressCircle extends StatelessWidget {
                 // 애니메이션을 위한 숫자 계산 (완료 개수 증가하는 효과)
                 final animatedCompleted =
                     (completedHabits * progressAnimation.value).round();
-                logger.debug(
-                  'ProgressCircle 표시 완료 수: $animatedCompleted/$totalHabits',
-                );
+                // logger.debug(
+                //   'ProgressCircle 표시 완료 수: $animatedCompleted/$totalHabits',
+                // );
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,

@@ -69,7 +69,7 @@ class _PatternScreenState extends ConsumerState<PatternScreen>
 
   @override
   Widget build(BuildContext context) {
-    logger.debug('PatternScreen 빌드');
+    //logger.debug('PatternScreen 빌드');
 
     // HomeViewModel 관찰
     final viewModel = ref.watch(homeViewModelProvider);

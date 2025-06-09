@@ -61,7 +61,7 @@ class _EnhancedHabitItemState extends State<EnhancedHabitItem>
       Duration(milliseconds: (widget.animationDelay * 1000).toInt()),
       () {
         if (mounted) {
-          logger.debug('EnhancedHabitItem 애니메이션 시작: ${widget.habit.name}');
+          //logger.debug('EnhancedHabitItem 애니메이션 시작: ${widget.habit.name}');
           _controller.forward();
         }
       },

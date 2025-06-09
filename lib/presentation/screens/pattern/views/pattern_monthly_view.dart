@@ -15,7 +15,7 @@ class PatternMonthlyView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    logger.debug('PatternMonthlyView 빌드');
+    //logger.debug('PatternMonthlyView 빌드');
 
     final viewModel = ref.watch(homeViewModelProvider);
     final state = viewModel.state;

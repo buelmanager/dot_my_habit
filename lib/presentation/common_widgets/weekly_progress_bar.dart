@@ -39,7 +39,7 @@ class WeeklyProgressBar extends StatelessWidget {
           // 각 요일별 애니메이션 지연 시간 설정 (순차적 애니메이션)
           final delayFactor = index * 0.1;
 
-          logger.debug('$day 진행률: $progress');
+          //logger.debug('$day 진행률: $progress');
 
           return Expanded(
             child: Container(
@@ -74,12 +74,12 @@ class WeeklyProgressBar extends StatelessWidget {
                                 math.max(0.0, math.min(1.0, animationValue)) *
                                 progress;
 
-                            logger.debug(
-                              'day $day animationValue: $animationValue',
-                            );
-                            logger.debug(
-                              'day $day currentProgress: $currentProgress',
-                            );
+                            // logger.debug(
+                            //   'day $day animationValue: $animationValue',
+                            // );
+                            // logger.debug(
+                            //   'day $day currentProgress: $currentProgress',
+                            // );
 
                             return Container(
                               decoration: BoxDecoration(
