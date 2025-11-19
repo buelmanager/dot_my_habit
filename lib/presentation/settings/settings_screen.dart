@@ -1,10 +1,15 @@
-// lib/presentation/screens/settings/settings_screen.dart
+// lib/presentation/screens/settings/settings_screen.dart (수정된 버전)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app_providers.dart';
 import '../../../core/logger.dart';
-import '../../app_providers.dart';
+import '../../../data/services/subscription_service.dart';
+import '../../../data/services/premium_service.dart';
+import '../../../domain/models/subscription_model.dart';
+import '../screens/subscription/subscription_screen.dart';
+import '../widgets/premium_required_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({Key? key}) : super(key: key);
@@ -14,16 +19,59 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  static const String _tag = 'SettingsScreen';
   bool _isProcessing = false;
 
   @override
+  void initState() {
+    super.initState();
+    logger.info('🏠 SettingsScreen 초기화', tag: _tag);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    logger.debug('🔄 SettingsScreen build 호출', tag: _tag);
+
+    final subscriptionAsync = ref.watch(currentSubscriptionProvider);
+
+    // 구독 상태 로그
+    subscriptionAsync.whenOrNull(
+      data: (subscription) {
+        logger.info(
+          '📊 현재 구독 상태: ${subscription.type}, isPremium: ${subscription.isPremium}, isTrial: ${subscription.isTrial}',
+          tag: _tag,
+        );
+      },
+      error: (error, stack) {
+        logger.error('❌ 구독 상태 조회 오류: $error', tag: _tag);
+      },
+    );
+
     return Scaffold(
       body: SafeArea(
         child: ListView(
           children: [
             // 헤더 부분
             _buildHeader(context),
+
+            // 구독 상태 섹션
+            subscriptionAsync.when(
+              loading: () {
+                logger.debug('🔄 구독 정보 로딩 중...', tag: _tag);
+                return const SizedBox.shrink();
+              },
+              error: (error, stack) {
+                logger.error('❌ 구독 정보 로딩 오류: $error', tag: _tag);
+                return const SizedBox.shrink();
+              },
+              data: (subscription) {
+                logger.debug('✅ 구독 정보 로딩 완료: ${subscription.type}', tag: _tag);
+                return _buildSubscriptionSection(context, subscription);
+              },
+            ),
+
+            // 개발자 테스트 섹션
+            _buildDeveloperTestSection(context),
 
             // 설정 그룹: 앱 설정
             _buildSectionHeader(context, '앱 설정'),
@@ -33,8 +81,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: '테마',
               subtitle: '기본 (흑백)',
               onTap: () {
-                logger.debug('테마 설정 탭');
-                // TODO: 테마 설정 화면으로 이동
+                logger.debug('테마 설정 탭', tag: _tag);
                 _showFeatureNotImplementedSnackBar();
               },
             ),
@@ -44,44 +91,101 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: '알림',
               subtitle: '사용',
               onTap: () {
-                logger.debug('알림 설정 탭');
-                // TODO: 알림 설정 화면으로 이동
+                logger.debug('알림 설정 탭', tag: _tag);
                 _showFeatureNotImplementedSnackBar();
               },
             ),
 
-            // 설정 그룹: 데이터
+            // 설정 그룹: 데이터 (프리미엄 제한 적용)
             _buildSectionHeader(context, '데이터'),
-            _buildSettingItem(
-              context,
-              icon: Icons.file_download_outlined,
-              title: '데이터 내보내기',
-              subtitle: '모든 습관 데이터 백업',
-              isLoading: _isProcessing,
-              onTap: _isProcessing ? null : _backupData,
-            ),
-            _buildSettingItem(
-              context,
-              icon: Icons.file_upload_outlined,
-              title: '데이터 가져오기',
-              subtitle: '백업 데이터 복원',
-              isLoading: _isProcessing,
-              onTap: _isProcessing ? null : _importData,
-            ),
+            Consumer(
+              builder: (context, ref, child) {
+                logger.debug('🔍 데이터 백업 권한 확인 중...', tag: _tag);
+                final dataBackupAsync = ref.watch(canUseDataBackupProvider);
 
-            // 설정 그룹: 계정
-            _buildSectionHeader(context, '계정'),
-            _buildSettingItem(
-              context,
-              icon: Icons.star_border_outlined,
-              title: '프리미엄 업그레이드',
-              subtitle: '더 많은 기능 사용하기',
-              onTap: () {
-                logger.debug('프리미엄 업그레이드 탭');
-                // TODO: 프리미엄 업그레이드 화면으로 이동
-                _showFeatureNotImplementedSnackBar();
+                return dataBackupAsync.when(
+                  loading: () {
+                    logger.debug('⏳ 데이터 백업 권한 로딩 중...', tag: _tag);
+                    return Column(
+                      children: [
+                        _buildSettingItem(
+                          context,
+                          icon: Icons.file_download_outlined,
+                          title: '데이터 내보내기',
+                          subtitle: '권한 확인 중...',
+                          isLoading: true,
+                          onTap: null,
+                        ),
+                        _buildSettingItem(
+                          context,
+                          icon: Icons.file_upload_outlined,
+                          title: '데이터 가져오기',
+                          subtitle: '권한 확인 중...',
+                          isLoading: true,
+                          onTap: null,
+                        ),
+                      ],
+                    );
+                  },
+                  error: (error, stack) {
+                    logger.error('❌ 데이터 백업 권한 확인 오류: $error', tag: _tag);
+                    return Column(
+                      children: [
+                        _buildSettingItem(
+                          context,
+                          icon: Icons.file_download_outlined,
+                          title: '데이터 내보내기',
+                          subtitle: '프리미엄 전용 기능',
+                          isPremiumOnly: true,
+                          onTap: () => _showPremiumRequiredDialog('데이터 내보내기'),
+                        ),
+                        _buildSettingItem(
+                          context,
+                          icon: Icons.file_upload_outlined,
+                          title: '데이터 가져오기',
+                          subtitle: '프리미엄 전용 기능',
+                          isPremiumOnly: true,
+                          onTap: () => _showPremiumRequiredDialog('데이터 가져오기'),
+                        ),
+                      ],
+                    );
+                  },
+                  data: (canUseBackup) {
+                    logger.info('✅ 데이터 백업 권한 확인 완료: $canUseBackup', tag: _tag);
+                    return Column(
+                      children: [
+                        _buildSettingItem(
+                          context,
+                          icon: Icons.file_download_outlined,
+                          title: '데이터 내보내기',
+                          subtitle:
+                              canUseBackup ? '모든 습관 데이터 백업' : '프리미엄 전용 기능',
+                          isLoading: _isProcessing,
+                          isPremiumOnly: !canUseBackup,
+                          onTap:
+                              canUseBackup
+                                  ? (_isProcessing ? null : _backupData)
+                                  : () =>
+                                      _showPremiumRequiredDialog('데이터 내보내기'),
+                        ),
+                        _buildSettingItem(
+                          context,
+                          icon: Icons.file_upload_outlined,
+                          title: '데이터 가져오기',
+                          subtitle: canUseBackup ? '백업 데이터 복원' : '프리미엄 전용 기능',
+                          isLoading: _isProcessing,
+                          isPremiumOnly: !canUseBackup,
+                          onTap:
+                              canUseBackup
+                                  ? (_isProcessing ? null : _importData)
+                                  : () =>
+                                      _showPremiumRequiredDialog('데이터 가져오기'),
+                        ),
+                      ],
+                    );
+                  },
+                );
               },
-              showBadge: true,
             ),
 
             // 설정 그룹: 앱 정보
@@ -90,9 +194,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               context,
               icon: Icons.info_outline,
               title: '버전 정보',
-              subtitle: '1.0.0', // AppConstants.appVersion
+              subtitle: '1.0.0',
               onTap: () {
-                logger.debug('버전 정보 탭');
+                logger.debug('버전 정보 탭', tag: _tag);
                 _showAboutDialog(context);
               },
             ),
@@ -102,25 +206,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               title: '도움말',
               subtitle: '앱 사용 가이드',
               onTap: () {
-                logger.debug('도움말 탭');
-                // TODO: 도움말 화면으로 이동
+                logger.debug('도움말 탭', tag: _tag);
                 _showFeatureNotImplementedSnackBar();
               },
+              showDivider: false,
             ),
 
-            // 개발자용 섹션 (빠른 데이터 관리)
-            // _buildSectionHeader(context, '개발자 옵션'),
-            // _buildSettingItem(
-            //   context,
-            //   icon: Icons.delete_outline,
-            //   title: '더미 데이터 초기화',
-            //   subtitle: '테스트용 데이터 다시 로드',
-            //   onTap: () {
-            //     logger.debug('더미 데이터 초기화 탭');
-            //     _resetDummyData(context);
-            //   },
-            //   showDivider: false,
-            // ),
             const SizedBox(height: 40),
           ],
         ),
@@ -141,6 +232,273 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
+      ),
+    );
+  }
+
+  // 구독 상태 섹션
+  Widget _buildSubscriptionSection(
+    BuildContext context,
+    SubscriptionModel subscription,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: GestureDetector(
+        onTap: () => _navigateToSubscription(context),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient:
+                subscription.isPremium
+                    ? const LinearGradient(
+                      colors: [Colors.purple, Colors.deepPurple],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                    : LinearGradient(
+                      colors: [Colors.grey[100]!, Colors.grey[200]!],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color:
+                    subscription.isPremium
+                        ? Colors.purple.withOpacity(0.3)
+                        : Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    subscription.isPremium ? Icons.star : Icons.star_border,
+                    color:
+                        subscription.isPremium
+                            ? Colors.white
+                            : Colors.grey[600],
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          subscription.isPremium ? '프리미엄' : '무료 플랜',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color:
+                                subscription.isPremium
+                                    ? Colors.white
+                                    : Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          subscription.isPremium
+                              ? subscription.isTrial
+                                  ? '체험판 ${subscription.remainingDays}일 남음'
+                                  : '모든 기능 사용 가능'
+                              : '기본 기능만 사용 가능',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color:
+                                subscription.isPremium
+                                    ? Colors.white.withOpacity(0.9)
+                                    : Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    Icons.arrow_forward_ios,
+                    color:
+                        subscription.isPremium
+                            ? Colors.white
+                            : Colors.grey[600],
+                    size: 16,
+                  ),
+                ],
+              ),
+              if (!subscription.isPremium) ...[
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => _navigateToSubscription(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text(
+                      '프리미엄 업그레이드',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 개발자 테스트 섹션
+  Widget _buildDeveloperTestSection(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.blue[50],
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.blue[200]!),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.bug_report, color: Colors.blue[700], size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  '개발자 테스트',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '구독 기능을 시뮬레이션으로 테스트해보세요',
+              style: TextStyle(fontSize: 14, color: Colors.blue[600]),
+            ),
+            const SizedBox(height: 16),
+
+            // 시뮬레이션 버튼들
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isProcessing ? null : _simulateFreeTrial,
+                    icon:
+                        _isProcessing
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.play_circle_outline, size: 18),
+                    label: const Text('무료 체험'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isProcessing ? null : _simulatePremium,
+                    icon:
+                        _isProcessing
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.star, size: 18),
+                    label: const Text('프리미엄'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple[600],
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isProcessing ? null : _simulateExpired,
+                    icon:
+                        _isProcessing
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.timer_off, size: 18),
+                    label: const Text('만료'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange[600],
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _isProcessing ? null : _resetToFree,
+                    icon:
+                        _isProcessing
+                            ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                            : const Icon(Icons.refresh, size: 18),
+                    label: const Text('초기화'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey[600],
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -170,255 +528,362 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     bool showDivider = true,
     bool showBadge = false,
     bool isLoading = false,
+    bool isPremiumOnly = false,
   }) {
     return Column(
       children: [
-        InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(
-              children: [
-                // 아이콘
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.05),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: Colors.black, size: 22),
-                ),
-
-                const SizedBox(width: 12),
-
-                // 텍스트 영역
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black.withOpacity(0.6),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // 로딩 인디케이터 또는 뱃지 또는 화살표
-                if (isLoading)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.black,
-                    ),
-                  )
-                else if (showBadge)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'PRO',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  )
-                else
-                  const Icon(
-                    Icons.chevron_right,
-                    color: Colors.black45,
-                    size: 20,
-                  ),
-              ],
+        ListTile(
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 4,
+          ),
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color:
+                  isPremiumOnly
+                      ? Colors.purple.withOpacity(0.1)
+                      : Colors.black.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color:
+                  isPremiumOnly
+                      ? Colors.purple.withOpacity(0.7)
+                      : Colors.black.withOpacity(0.7),
+              size: 20,
             ),
           ),
+          title: Row(
+            children: [
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color:
+                      isPremiumOnly
+                          ? Colors.purple.withOpacity(0.8)
+                          : Colors.black,
+                ),
+              ),
+              if (showBadge) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.purple,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'NEW',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+              if (isPremiumOnly) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.purple,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Text(
+                    'PRO',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          subtitle: Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  isPremiumOnly
+                      ? Colors.purple.withOpacity(0.6)
+                      : Colors.black.withOpacity(0.6),
+            ),
+          ),
+          trailing:
+              isLoading
+                  ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                  : isPremiumOnly
+                  ? Icon(
+                    Icons.lock_outline,
+                    color: Colors.purple.withOpacity(0.6),
+                    size: 20,
+                  )
+                  : Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.black.withOpacity(0.3),
+                    size: 16,
+                  ),
+          onTap: onTap,
         ),
-
-        // 구분선
         if (showDivider)
-          Padding(
-            padding: const EdgeInsets.only(left: 72, right: 20),
-            child: Divider(height: 1, color: Colors.black.withOpacity(0.05)),
+          Divider(
+            height: 1,
+            indent: 80,
+            endIndent: 20,
+            color: Colors.black.withOpacity(0.1),
           ),
       ],
     );
   }
 
-  /// 데이터 백업 기능
-  Future<void> _backupData() async {
-    logger.debug('데이터 백업 시작');
+  // =============================================================================
+  // 이벤트 핸들러들
+  // =============================================================================
 
-    setState(() {
-      _isProcessing = true;
-    });
+  void _showPremiumRequiredDialog(String featureName) {
+    PremiumRequiredDialog.show(context, featureName);
+
+    // 또는 확장 메서드 사용
+    // context.showPremiumRequiredDialog(featureName);
+  }
+
+  // 구독 화면으로 이동
+  void _navigateToSubscription(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+    );
+  }
+
+  // 시뮬레이션: 무료 체험 시작
+  Future<void> _simulateFreeTrial() async {
+    logger.info('🎭 무료 체험 시뮬레이션 시작', tag: _tag);
+    setState(() => _isProcessing = true);
+
+    try {
+      await Future.delayed(const Duration(seconds: 1));
+
+      logger.debug('🔄 무료 체험 provider 호출 시작', tag: _tag);
+      final success = await ref.read(startFreeTrialProvider.future);
+      logger.info('📋 무료 체험 provider 결과: $success', tag: _tag);
+
+      if (mounted) {
+        if (success) {
+          logger.info('✅ 무료 체험 시뮬레이션 성공 - UI 새로고침', tag: _tag);
+          // 수동으로 provider 새로고침
+          ref.invalidate(currentSubscriptionProvider);
+          ref.invalidate(isPremiumUserProvider);
+          ref.invalidate(canUseDataBackupProvider);
+
+          _showSuccessSnackBar('🎉 무료 체험이 시작되었습니다! (시뮬레이션)');
+        } else {
+          logger.warning('⚠️ 무료 체험 시뮬레이션 실패', tag: _tag);
+          _showErrorSnackBar('무료 체험 시작에 실패했습니다.');
+        }
+      }
+    } catch (e) {
+      logger.error('❌ 무료 체험 시뮬레이션 오류: $e', tag: _tag);
+      if (mounted) {
+        _showErrorSnackBar('시뮬레이션 중 오류가 발생했습니다.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  // 시뮬레이션: 프리미엄 구독 활성화
+  Future<void> _simulatePremium() async {
+    logger.info('🎭 프리미엄 구독 시뮬레이션 시작', tag: _tag);
+    setState(() => _isProcessing = true);
+
+    try {
+      await Future.delayed(const Duration(seconds: 1));
+
+      logger.debug('🔄 프리미엄 구독 provider 호출 시작', tag: _tag);
+      final subscriptionService = ref.read(subscriptionServiceProvider);
+      final success = await subscriptionService.startSubscription(
+        'premium_yearly',
+      );
+      logger.info('📋 프리미엄 구독 provider 결과: $success', tag: _tag);
+
+      if (mounted) {
+        if (success) {
+          logger.info('✅ 프리미엄 구독 시뮬레이션 성공 - UI 새로고침', tag: _tag);
+          // 수동으로 provider 새로고침
+          ref.invalidate(currentSubscriptionProvider);
+          ref.invalidate(isPremiumUserProvider);
+          ref.invalidate(canUseDataBackupProvider);
+
+          _showSuccessSnackBar('🌟 프리미엄 구독이 활성화되었습니다! (시뮬레이션)');
+        } else {
+          logger.warning('⚠️ 프리미엄 구독 시뮬레이션 실패', tag: _tag);
+          _showErrorSnackBar('프리미엄 구독 활성화에 실패했습니다.');
+        }
+      }
+    } catch (e) {
+      logger.error('❌ 프리미엄 구독 시뮬레이션 오류: $e', tag: _tag);
+      if (mounted) {
+        _showErrorSnackBar('시뮬레이션 중 오류가 발생했습니다.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  // 시뮬레이션: 만료된 구독
+  Future<void> _simulateExpired() async {
+    logger.info('🎭 만료된 구독 시뮬레이션 시작', tag: _tag);
+    setState(() => _isProcessing = true);
+
+    try {
+      await Future.delayed(const Duration(seconds: 1));
+
+      logger.debug('🔄 구독 만료 provider 호출 시작', tag: _tag);
+      final subscriptionService = ref.read(subscriptionServiceProvider);
+      final success = await subscriptionService.cancelSubscription();
+      logger.info('📋 구독 만료 provider 결과: $success', tag: _tag);
+
+      if (mounted) {
+        if (success) {
+          logger.info('✅ 만료된 구독 시뮬레이션 성공 - UI 새로고침', tag: _tag);
+          // 수동으로 provider 새로고침
+          ref.invalidate(currentSubscriptionProvider);
+          ref.invalidate(isPremiumUserProvider);
+          ref.invalidate(canUseDataBackupProvider);
+
+          _showSuccessSnackBar('⏰ 구독이 만료되었습니다 (시뮬레이션)');
+        } else {
+          logger.warning('⚠️ 구독 만료 시뮬레이션 실패', tag: _tag);
+          _showErrorSnackBar('구독 만료 시뮬레이션에 실패했습니다.');
+        }
+      }
+    } catch (e) {
+      logger.error('❌ 만료된 구독 시뮬레이션 오류: $e', tag: _tag);
+      if (mounted) {
+        _showErrorSnackBar('시뮬레이션 중 오류가 발생했습니다.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  // 시뮬레이션: 무료 플랜으로 초기화
+  Future<void> _resetToFree() async {
+    logger.info('🎭 무료 플랜 초기화 시뮬레이션 시작', tag: _tag);
+    setState(() => _isProcessing = true);
+
+    try {
+      await Future.delayed(const Duration(seconds: 1));
+
+      logger.debug('🔄 구독 초기화 시작', tag: _tag);
+      final subscriptionService = ref.read(subscriptionServiceProvider);
+      final success = await subscriptionService.saveSubscription(
+        SubscriptionModel.defaultFree,
+      );
+      logger.info('📋 구독 초기화 결과: $success', tag: _tag);
+
+      if (mounted) {
+        if (success) {
+          logger.info('✅ 무료 플랜 초기화 성공 - UI 새로고침', tag: _tag);
+          // provider 새로고침
+          ref.invalidate(currentSubscriptionProvider);
+          ref.invalidate(isPremiumUserProvider);
+          ref.invalidate(canUseDataBackupProvider);
+
+          _showSuccessSnackBar('🔄 무료 플랜으로 초기화되었습니다 (시뮬레이션)');
+        } else {
+          logger.warning('⚠️ 무료 플랜 초기화 실패', tag: _tag);
+          _showErrorSnackBar('초기화에 실패했습니다.');
+        }
+      }
+    } catch (e) {
+      logger.error('❌ 무료 플랜 초기화 시뮬레이션 오류: $e', tag: _tag);
+      if (mounted) {
+        _showErrorSnackBar('시뮬레이션 중 오류가 발생했습니다.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  // 데이터 백업
+  Future<void> _backupData() async {
+    setState(() => _isProcessing = true);
 
     try {
       final backupService = ref.read(backupServiceProvider);
       final success = await backupService.exportToJson();
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? '습관 데이터 백업 성공' : '습관 데이터 백업 실패'),
-            backgroundColor: success ? Colors.black : Colors.red,
-          ),
-        );
+      if (!mounted) return;
+
+      if (success) {
+        _showSuccessSnackBar('데이터 백업이 완료되었습니다.');
+      } else {
+        _showErrorSnackBar('데이터 백업에 실패했습니다.');
       }
     } catch (e) {
-      logger.error('백업 오류: $e');
+      logger.error('데이터 백업 오류: $e', tag: _tag);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('오류가 발생했습니다: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackBar('백업 중 오류 발생: $e');
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
+        setState(() => _isProcessing = false);
       }
     }
   }
 
-  /// 데이터 복원 기능
+  // 데이터 가져오기
   Future<void> _importData() async {
-    logger.debug('데이터 복원 시작');
-
-    // 복원 전 경고 표시
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('데이터 복원'),
-            content: const Text(
-              '백업 파일에서 데이터를 복원하면 기존 데이터와 병합됩니다. 이 작업은 되돌릴 수 없습니다. 계속하시겠습니까?',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('취소'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('복원'),
-              ),
-            ],
-          ),
-    );
-
-    if (confirm != true) {
-      logger.debug('데이터 복원 취소됨');
-      return;
-    }
-
-    setState(() {
-      _isProcessing = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
       final backupService = ref.read(backupServiceProvider);
       final success = await backupService.importFromJson();
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(success ? '습관 데이터 복원 성공' : '습관 데이터 복원 실패'),
-            backgroundColor: success ? Colors.black : Colors.red,
-          ),
-        );
+      if (!mounted) return;
+
+      if (success) {
+        _showSuccessSnackBar('데이터 가져오기가 완료되었습니다.');
+      } else {
+        _showErrorSnackBar('데이터 가져오기에 실패했습니다.');
       }
     } catch (e) {
-      logger.error('복원 오류: $e');
+      logger.error('데이터 가져오기 오류: $e', tag: _tag);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('오류가 발생했습니다: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        _showErrorSnackBar('가져오기 중 오류 발생: $e');
       }
     } finally {
       if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
+        setState(() => _isProcessing = false);
       }
     }
-  }
-
-  // 더미 데이터 초기화
-  void _resetDummyData(BuildContext context) {
-    // 확인 다이얼로그 표시
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('더미 데이터 초기화'),
-            content: const Text('테스트용 더미 데이터를 초기화하시겠습니까?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  '취소',
-                  style: TextStyle(color: Colors.black54),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-
-                  // 데이터 초기화 로직
-                  try {
-                    final viewModel = ref.read(homeViewModelProvider);
-                    viewModel.refresh();
-
-                    // 완료 메시지
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('더미 데이터가 초기화되었습니다.'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  } catch (e) {
-                    logger.error('데이터 초기화 오류: $e');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('데이터 초기화 중 오류 발생: $e'),
-                        backgroundColor: Colors.red,
-                      ),
-                    );
-                  }
-                },
-                child: const Text('초기화'),
-              ),
-            ],
-          ),
-    );
   }
 
   // 앱 정보 대화상자
@@ -464,6 +929,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ],
           ),
+    );
+  }
+
+  // 성공 스낵바
+  void _showSuccessSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  // 오류 스낵바
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        duration: const Duration(seconds: 3),
+      ),
     );
   }
 

@@ -29,31 +29,31 @@ final appTheme = ThemeData(
   scaffoldBackgroundColor: Colors.white,
 
   // 다이얼로그 테마 (AlertDialog 배경색상 설정)
-  dialogTheme: const DialogTheme(
-    backgroundColor: Colors.white, // 다이얼로그 배경색
-    elevation: 8, // 그림자 높이
-    shape: RoundedRectangleBorder(
-      // 모서리 둥글게
-      borderRadius: BorderRadius.all(Radius.circular(16)),
-    ),
-    titleTextStyle: TextStyle(
-      // 제목 스타일
-      color: Colors.black,
-      fontSize: 20,
-      fontWeight: FontWeight.w600,
-    ),
-    contentTextStyle: TextStyle(
-      // 내용 스타일
-      color: Colors.black87,
-      fontSize: 16,
-      height: 1.4,
-    ),
-    actionsPadding: EdgeInsets.symmetric(
-      // 버튼 패딩
-      horizontal: 16,
-      vertical: 8,
-    ),
-  ),
+  // dialogTheme: const DialogTheme(
+  //   backgroundColor: Colors.white, // 다이얼로그 배경색
+  //   elevation: 8, // 그림자 높이
+  //   shape: RoundedRectangleBorder(
+  //     // 모서리 둥글게
+  //     borderRadius: BorderRadius.all(Radius.circular(16)),
+  //   ),
+  //   titleTextStyle: TextStyle(
+  //     // 제목 스타일
+  //     color: Colors.black,
+  //     fontSize: 20,
+  //     fontWeight: FontWeight.w600,
+  //   ),
+  //   contentTextStyle: TextStyle(
+  //     // 내용 스타일
+  //     color: Colors.black87,
+  //     fontSize: 16,
+  //     height: 1.4,
+  //   ),
+  //   actionsPadding: EdgeInsets.symmetric(
+  //     // 버튼 패딩
+  //     horizontal: 16,
+  //     vertical: 8,
+  //   ),
+  // ),
 
   // 텍스트 테마
   textTheme: const TextTheme(
@@ -112,15 +112,15 @@ final appTheme = ThemeData(
   ),
 
   // 카드 테마
-  cardTheme: CardTheme(
-    elevation: 0,
-    color: Colors.white,
-    margin: EdgeInsets.zero,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(12),
-      side: BorderSide(color: Colors.black.withOpacity(0.05), width: 1),
-    ),
-  ),
+  // cardTheme: CardTheme(
+  //   elevation: 0,
+  //   color: Colors.white,
+  //   margin: EdgeInsets.zero,
+  //   shape: RoundedRectangleBorder(
+  //     borderRadius: BorderRadius.circular(12),
+  //     side: BorderSide(color: Colors.black.withOpacity(0.05), width: 1),
+  //   ),
+  // ),
 
   // 디바이더 테마
   dividerTheme: const DividerThemeData(

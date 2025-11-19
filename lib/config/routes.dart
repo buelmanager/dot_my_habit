@@ -6,7 +6,6 @@ class Routes {
   /// 온보딩 화면
   static const String onboarding = '/onboarding';
 
-  /// 홈 화면
   static const String home = '/';
 
   /// 통계 화면
@@ -14,4 +13,7 @@ class Routes {
 
   /// 설정 화면
   static const String settings = '/settings';
+
+  /// 구독 화면 (새로 추가)
+  static const String subscription = '/subscription';
 }

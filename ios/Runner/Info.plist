@@ -47,5 +47,20 @@
 	<true/>
 	<key>NSPhotoLibraryUsageDescription</key>
     <string>좋은 습관 형성을 위해 사진을 저장하거나 프로필 이미지를 설정할 때 사진 라이브러리에 접근합니다.</string>
+    <key>SKAdNetworkItems</key>
+    <array>
+      <dict>
+        <key>SKAdNetworkIdentifier</key>
+        <string>cstr6suwn9.skadnetwork</string>
+      </dict>
+    </array>
+    <!-- 인앱구매 권한 -->
+    <key>SKAdNetworkItems</key>
+    <array>
+        <dict>
+            <key>SKAdNetworkIdentifier</key>
+            <string>238da6jt44.skadnetwork</string>
+        </dict>
+    </array>
 </dict>
 </plist>

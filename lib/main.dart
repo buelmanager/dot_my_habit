@@ -8,6 +8,7 @@ import '../core/logger.dart';
 import '../data/datasources/local/database.dart';
 import '../data/services/ai_habit_analysis_service.dart';
 import '../app_router.dart';
+import 'data/services/revenuecat_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,6 +59,21 @@ class DotHabitApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     logger.debug('DotHabitApp 빌드');
+
+    // RevenueCat 초기화
+    ref.listen(revenueCatInitProvider, (previous, next) {
+      next.when(
+        data: (success) {
+          if (success) {
+            logger.info('RevenueCat 초기화 성공');
+          } else {
+            logger.error('RevenueCat 초기화 실패');
+          }
+        },
+        loading: () => logger.debug('RevenueCat 초기화 중...'),
+        error: (error, stack) => logger.error('RevenueCat 초기화 오류: $error'),
+      );
+    });
 
     // GoRouter 인스턴스 가져오기
     final router = ref.watch(appRouterProvider);
